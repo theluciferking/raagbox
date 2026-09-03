@@ -83,6 +83,15 @@ export default function SpotifyWebPlayer({ token, playlistId, playlistName }: Pr
 
   useEffect(() => { playerRef.current?.setVolume?.(volume); }, [volume]);
 
+  const lastPlaylistRef = useRef(playlistId);
+
+  useEffect(() => {
+    if (!ready || !deviceIdRef.current || !playlistId) return;
+    if (lastPlaylistRef.current === playlistId) return;
+    lastPlaylistRef.current = playlistId;
+    void playPlaylist(0);
+  }, [playlistId, ready]);
+
   useEffect(() => {
     const timer = window.setInterval(async () => {
       if (!playerRef.current) return;

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import SpotifyWebPlayer from "../components/SpotifyWebPlayer";
-import { fetchPlaylist, getPlaylistId, type SpotifyPlaylist } from "../lib/spotify";
+import { fetchPlaylist, fetchUserPlaylists, getPlaylistId, type SpotifyPlaylist } from "../lib/spotify";
 
 const DEFAULT_URL = "";
 const CLIENT_ID = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID ?? "";
@@ -35,6 +35,7 @@ export default function Home() {
   const [playlistUrl, setPlaylistUrl] = useState(DEFAULT_URL);
   const [playlist, setPlaylist] = useState<SpotifyPlaylist | null>(null);
   const [saved, setSaved] = useState<SavedPlaylist[]>([]);
+  const [spotifyPlaylists, setSpotifyPlaylists] = useState<SpotifyPlaylist[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -45,6 +46,20 @@ export default function Home() {
     const savedToken = localStorage.getItem("raagbox_access_token");
     if (savedToken) setToken(savedToken);
   }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const items = await fetchUserPlaylists(token);
+        if (!cancelled) setSpotifyPlaylists(items);
+      } catch (e) {
+        if (!cancelled) setMessage(e instanceof Error ? e.message : "Could not load your Spotify playlists.");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [token]);
 
   useEffect(() => { localStorage.setItem("raagbox_saved", JSON.stringify(saved)); }, [saved]);
 
@@ -141,6 +156,32 @@ export default function Home() {
 
           </div>
 
+          {token && spotifyPlaylists.length > 0 && (
+            <section className="spotify-library">
+              <div className="library-heading">
+                <div>
+                  <span className="eyebrow">YOUR SPOTIFY</span>
+                  <h2>Your Playlists</h2>
+                </div>
+                <span className="library-count">{spotifyPlaylists.length} PLAYLISTS</span>
+              </div>
+              <div className="playlist-card-grid">
+                {spotifyPlaylists.map((item) => (
+                  <button key={item.id} className={`playlist-card ${playlist?.id === item.id ? "active" : ""}`} onClick={() => { setPlaylist(item); setPlaylistUrl(item.external_urls.spotify); }}>
+                    <div className="playlist-card-art">
+                      {item.images?.[0]?.url ? <img src={item.images[0].url} alt="" /> : <div className="playlist-art-fallback">♫</div>}
+                      <span className="playlist-play">▶</span>
+                    </div>
+                    <div className="playlist-card-copy">
+                      <strong>{item.name}</strong>
+                      <span>{item.owner?.display_name || "Spotify playlist"}</span>
+                      <small>{item.items?.total ?? 0} songs</small>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
 
         </div>
 </section>

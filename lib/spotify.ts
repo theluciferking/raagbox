@@ -25,6 +25,23 @@ export type SpotifyPlaylist = {
   items?: { total: number };
 };
 
+
+export async function fetchUserPlaylists(token: string): Promise<SpotifyPlaylist[]> {
+  const playlists: SpotifyPlaylist[] = [];
+  let url = new URL("https://api.spotify.com/v1/me/playlists");
+  url.searchParams.set("limit", "50");
+  url.searchParams.set("market", "IN");
+  while (url) {
+    const response = await fetch(url.toString(), { headers: spotifyApiHeaders(token), cache: "no-store" });
+    if (!response.ok) throw await spotifyError(response, "Spotify playlists request failed");
+    const data = await response.json();
+    playlists.push(...(data.items ?? []));
+    if (!data.next) break;
+    url = new URL(data.next);
+  }
+  return playlists;
+}
+
 export function getPlaylistId(value: string) {
   const trimmed = value.trim();
   const match = trimmed.match(/(?:open\.spotify\.com\/(?:intl-[^/]+\/)?playlist\/|spotify:playlist:)([A-Za-z0-9]+)(?:[?&/].*)?$/i);
