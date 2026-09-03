@@ -120,8 +120,7 @@ export default function Home() {
     <main className="app">
       <section className="workspace">
         <header className="topbar">
-          <div className="search"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search songs, artists, albums, playlists..."/><kbd>Ctrl /</kbd></div>
-          <button className="add-playlist" onClick={() => setShowAdd(true)}>＋ Add Playlist</button>
+<button className="add-playlist" onClick={() => setShowAdd(true)}>＋ Add Playlist</button>
         </header>
 
         <div className="content-grid">
@@ -146,9 +145,7 @@ export default function Home() {
 
 
         </div>
-
-        <footer><span>✿ Indian Aesthetic</span><i>•</i><span>♫ Custom Player</span><i>•</i><span>● Spotify Powered</span><i>•</i><span>▣ Mobile Responsive</span><i>•</i><span>♡ Easy to Use</span><i>•</i><span>♥ Made with love in India</span></footer>
-      </section>
+</section>
 
       {showAdd && <div className="modal-backdrop" onMouseDown={e => e.target===e.currentTarget && setShowAdd(false)}><div className="modal"><button className="close" onClick={() => setShowAdd(false)}>×</button><span className="eyebrow">ADD A MEHFIL</span><h2>Bring your playlist</h2><p>Paste a Spotify playlist URL. RaagBox fetches playlist metadata and starts the playlist context through Spotify Web Playback. Spotify controls which track metadata is available to the app.</p><label>Spotify playlist URL<input value={playlistUrl} onChange={e => setPlaylistUrl(e.target.value)} placeholder="https://open.spotify.com/playlist/..."/></label><div className="modal-actions"><button onClick={() => {setShowAdd(false); if(!token) login(); else loadPlaylist(playlistUrl);}} className="connect">{token ? "Load Playlist" : "Connect Spotify"}</button><button onClick={() => {setShowAdd(false); addSaved();}} className="ghost">Save current</button></div></div></div>}
       {message && <div className="toast">{message}<button onClick={() => setMessage("")}>×</button></div>}
