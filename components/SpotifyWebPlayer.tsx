@@ -10,7 +10,12 @@ declare global {
   }
 }
 
-type Props = { token: string; playlistId: string; playlistName: string };
+type Props = {
+  token: string;
+  playlistId: string;
+  playlistName: string;
+  onCurrentTrack?: (track: SDKTrack | null) => void;
+};
 
 type SDKTrack = {
   id: string;
@@ -21,7 +26,7 @@ type SDKTrack = {
   album: { name: string; images: { url: string }[] };
 };
 
-export default function SpotifyWebPlayer({ token, playlistId, playlistName }: Props) {
+export default function SpotifyWebPlayer({ token, playlistId, playlistName, onCurrentTrack }: Props) {
   const playerRef = useRef<any>(null);
   const deviceIdRef = useRef<string>("");
   const [ready, setReady] = useState(false);
@@ -53,7 +58,10 @@ export default function SpotifyWebPlayer({ token, playlistId, playlistName }: Pr
       player.addListener("player_state_changed", (state: any) => {
         if (!state) return;
         const track = state.track_window?.current_track as SDKTrack | undefined;
-        if (track) setCurrent(track);
+        if (track) {
+          setCurrent(track);
+          onCurrentTrack?.(track);
+        }
         const next = (state.track_window?.next_tracks ?? []) as SDKTrack[];
         setQueue(next.slice(0, 7));
         setPosition(state.position ?? 0);
@@ -98,7 +106,10 @@ export default function SpotifyWebPlayer({ token, playlistId, playlistName }: Pr
       const state = await playerRef.current.getCurrentState?.();
       if (state) {
         const track = state.track_window?.current_track as SDKTrack | undefined;
-        if (track) setCurrent(track);
+        if (track) {
+          setCurrent(track);
+          onCurrentTrack?.(track);
+        }
         setPosition(state.position ?? 0);
         setDuration(state.duration ?? track?.duration_ms ?? 0);
         setPlaying(!state.paused);

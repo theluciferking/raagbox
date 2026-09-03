@@ -39,6 +39,7 @@ export default function Home() {
   const [showAdd, setShowAdd] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [currentTrack, setCurrentTrack] = useState<{ name: string; artists: { name: string }[]; album: { name: string; images: { url: string }[] } } | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("raagbox_saved");
@@ -142,17 +143,22 @@ export default function Home() {
           <div className="main-column">
             <section className="hero-player">
               <div className="ornament">✦</div>
-              <div className="hero-artwork"><div className="placeholder-art">राग<br/><small>RaagBox</small></div></div>
+              <div className="hero-artwork">
+                {currentTrack?.album.images?.[0]?.url || playlist?.images?.[0]?.url ? (
+                  <img src={currentTrack?.album.images?.[0]?.url ?? playlist?.images?.[0]?.url} alt={currentTrack?.album.name ?? playlist?.name ?? "Album artwork"} />
+                ) : (
+                  <div className="placeholder-art">राग<br/><small>RaagBox</small></div>
+                )}
+              </div>
               <div className="hero-info">
                 <span className="now-pill">NOW PLAYING</span>
                 <div className="eyebrow">{playlist ? "SPOTIFY PLAYLIST" : "YOUR INDIAN MUSIC LOUNGE"}</div>
                 <h1>{playlist?.name ?? "Your next mehfil"}</h1>
-                <p className="artist-line">{playlist?.description ? playlist.description.replace(/<[^>]+>/g, "") : "Connect Spotify and paste a playlist URL to bring your music into this custom player."}</p>
                 <div className="actions"><a href={playlist?.external_urls.spotify ?? "https://open.spotify.com"} target="_blank" rel="noreferrer">↗ Spotify</a></div>
               </div>
                           </section>
 
-            {token && playlist ? <div id="player"><SpotifyWebPlayer token={token} playlistId={playlist.id} playlistName={playlist.name}/></div> : <section className="connect-card"><div className="connect-icon">♫</div><div><span className="eyebrow">CUSTOM PLAYER</span><h2>Connect Spotify to start listening</h2><p>The Spotify iframe is not used here. RaagBox uses Spotify's Web Playback SDK to provide this custom UI.</p></div><button className="connect" onClick={login} disabled={busy}>{busy ? "Connecting…" : "Connect Spotify"}</button></section>}
+            {token && playlist ? <div id="player"><SpotifyWebPlayer token={token} playlistId={playlist.id} playlistName={playlist.name} onCurrentTrack={setCurrentTrack}/></div> : <section className="connect-card"><div className="connect-icon">♫</div><div><span className="eyebrow">CUSTOM PLAYER</span><h2>Connect Spotify to start listening</h2><p>The Spotify iframe is not used here. RaagBox uses Spotify's Web Playback SDK to provide this custom UI.</p></div><button className="connect" onClick={login} disabled={busy}>{busy ? "Connecting…" : "Connect Spotify"}</button></section>}
 
           </div>
 
