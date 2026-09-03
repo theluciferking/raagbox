@@ -30,7 +30,6 @@ async function challenge(verifier: string) {
 }
 
 export default function Home() {
-  const [dark, setDark] = useState(true);
   const [token, setToken] = useState("");
   const [query, setQuery] = useState("");
   const [playlistUrl, setPlaylistUrl] = useState(DEFAULT_URL);
@@ -43,13 +42,10 @@ export default function Home() {
   useEffect(() => {
     const stored = localStorage.getItem("raagbox_saved");
     if (stored) { try { setSaved(JSON.parse(stored)); } catch {} }
-    const savedTheme = localStorage.getItem("raagbox_theme");
-    if (savedTheme) setDark(savedTheme === "dark");
     const savedToken = localStorage.getItem("raagbox_access_token");
     if (savedToken) setToken(savedToken);
   }, []);
 
-  useEffect(() => { localStorage.setItem("raagbox_theme", dark ? "dark" : "light"); }, [dark]);
   useEffect(() => { localStorage.setItem("raagbox_saved", JSON.stringify(saved)); }, [saved]);
 
   useEffect(() => {
@@ -119,27 +115,13 @@ export default function Home() {
     setSaved(prev => [item, ...prev.filter(x => x.id !== item.id)]); setShowAdd(false);
   }
 
-  const search = query.toLowerCase();
 
   return (
-    <main className={`app ${dark ? "dark" : "light"}`}>
-      <aside className="sidebar">
-        <div className="logo"><div className="logo-mark">राग</div><div><strong>RaagBox</strong><span>INDIAN MUSIC LOUNGE</span></div></div>
-        <nav>
-          <button className="nav-active">⌂ <span>Now Playing</span></button>
-          <button>☷ <span>Playlists</span></button><button>♡ <span>My Library</span></button><button>◷ <span>Recents</span></button>
-        </nav>
-        <div className="nav-divider"/><div className="browse-title">BROWSE</div>
-        {["Hindi","Bollywood","Punjabi","Marathi","Tamil","Telugu","Indie","Lo-fi / Chill","Devotional","Trending"].map((x,i) => <button className="genre" key={x}><b>{["ह","▣","◆","म","அ","అ","♬","◉","♨","♦"][i]}</b><span>{x}</span></button>)}
-        <div className="sidebar-art"><div>ॐ</div><span>संगीत • संस्कृति • कहानी</span></div>
-      </aside>
-
+    <main className="app">
       <section className="workspace">
         <header className="topbar">
           <div className="search"><span>⌕</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search songs, artists, albums, playlists..."/><kbd>Ctrl /</kbd></div>
-          <button className="mode" onClick={() => setDark(!dark)}>{dark ? "☀" : "☾"}<span>{dark ? "☾" : "☀"}</span></button>
           <button className="add-playlist" onClick={() => setShowAdd(true)}>＋ Add Playlist</button>
-          <button className="profile">♙</button>
         </header>
 
         <div className="content-grid">
@@ -152,7 +134,7 @@ export default function Home() {
                 <div className="eyebrow">{playlist ? "SPOTIFY PLAYLIST" : "YOUR INDIAN MUSIC LOUNGE"}</div>
                 <h1>{playlist?.name ?? "Your next mehfil"}</h1>
                 <p className="artist-line">{playlist?.description ? playlist.description.replace(/<[^>]+>/g, "") : "Connect Spotify and paste a playlist URL to bring your music into this custom player."}</p>
-                <div className="actions"><button className="liked">♡ Like</button><button onClick={() => document.getElementById("queue")?.scrollIntoView({behavior:"smooth"})}>☷ Queue</button><a href={playlist?.external_urls.spotify ?? "https://open.spotify.com"} target="_blank" rel="noreferrer">↗ Spotify</a></div>
+                <div className="actions"><button className="liked">♡ Like</button><a href={playlist?.external_urls.spotify ?? "https://open.spotify.com"} target="_blank" rel="noreferrer">↗ Spotify</a></div>
                 <div className="wave-large">{Array.from({length: 52}).map((_,i)=><i key={i} style={{height:`${10+((i*23)%44)}px`}}/>)}</div>
               </div>
               <div className="progress-label"><span>0:00</span><span>Spotify Web Playback</span><span>{playlist?.items?.total ? `${playlist.items.total} tracks` : "Spotify playlist"}</span></div>
@@ -160,17 +142,9 @@ export default function Home() {
 
             {token && playlist ? <div id="player"><SpotifyWebPlayer token={token} playlistId={playlist.id} playlistName={playlist.name}/></div> : <section className="connect-card"><div className="connect-icon">♫</div><div><span className="eyebrow">CUSTOM PLAYER</span><h2>Connect Spotify to start listening</h2><p>The Spotify iframe is not used here. RaagBox uses Spotify's Web Playback SDK to provide this custom UI.</p></div><button className="connect" onClick={login} disabled={busy}>{busy ? "Connecting…" : "Connect Spotify"}</button></section>}
 
-            <section className="featured"><div className="section-title"><div><span>FEATURED PLAYLISTS</span><h2>Made for your mood</h2></div><button>View All ›</button></div><div className="cards">{fallbackCards.map(([a,b,c,e],i)=><button className="playlist-card" key={a} onClick={() => {
-              const url = saved[i]?.url;
-              if (url) { setPlaylistUrl(url); if (token) loadPlaylist(url, token); else { setShowAdd(true); } }
-              else { setShowAdd(true); setMessage("Add your Spotify playlist URL to this card from the Add Playlist panel."); }
-            }}><div className={`card-art art-${i}`}>{e}<small>✦</small></div><strong>{a}</strong><span>{b}</span><em>{c}</em></button>)}</div></section>
           </div>
 
-          <aside className="right-column">
-            <section className="lyrics-panel"><div className="panel-head"><strong>LYRICS</strong><span>हिंदी⌄</span></div><div className="lyrics-placeholder"><p>Lyrics remain inside Spotify's supported experience.</p><p>RaagBox does not copy or host copyrighted lyrics.</p><button onClick={() => window.open(playlist?.external_urls.spotify ?? "https://open.spotify.com", "_blank")}>Open Spotify ↗</button></div></section>
-            <section className="queue-panel" id="queue"><div className="panel-head"><strong>QUEUE</strong><button onClick={() => document.getElementById("player")?.scrollIntoView({behavior:"smooth"})}>Open Player</button></div><div className="queue-list"><div className="empty-queue">The queue is supplied by Spotify after playback starts. Use the custom player to play, pause, skip and see upcoming tracks.</div></div></section>
-          </aside>
+
         </div>
 
         <footer><span>✿ Indian Aesthetic</span><i>•</i><span>♫ Custom Player</span><i>•</i><span>● Spotify Powered</span><i>•</i><span>▣ Mobile Responsive</span><i>•</i><span>♡ Easy to Use</span><i>•</i><span>♥ Made with love in India</span></footer>
