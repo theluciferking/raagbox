@@ -1,40 +1,34 @@
-# RaagBox — Indian Spotify Music Player
+# RaagBox Custom Spotify Player
 
-A Vercel-ready Next.js frontend for an Indian-style music lounge.
+A Next.js redesign based on the requested RaagBox dark Indian music dashboard. This version does **not render Spotify's official iframe embed in the UI**. Instead, it uses Spotify's Web Playback SDK + Web API to power a custom player interface.
 
-## Features
+## Important Spotify requirements
 
-- Paste a public Spotify playlist URL.
-- Automatically converts the playlist URL into an official Spotify Embed player.
-- Add unlimited playlist cards.
-- Search playlists.
-- Dark/light mode.
-- Responsive desktop/mobile layout.
-- No database or API key required.
-- Playlist cards are stored in browser localStorage.
+- Web Playback SDK playback requires a Spotify Premium account.
+- Spotify's current developer policy says streaming applications may not be commercial. Review Spotify's current developer terms before launching publicly or monetizing this project.
+- The user must authorize Spotify. This project uses Authorization Code with PKCE, so no client secret is shipped to the browser.
+- Do not copy/host copyrighted lyrics or rip/download Spotify audio.
 
-## Run locally
+## Setup
+
+1. Create a Spotify developer app.
+2. Copy `.env.example` to `.env.local`.
+3. Put your Spotify Client ID in `NEXT_PUBLIC_SPOTIFY_CLIENT_ID`.
+4. In the Spotify app settings, add the exact redirect URI:
+   - local: `http://127.0.0.1:3000`
+   - production: your exact HTTPS Vercel URL
+5. Run:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:3000
+6. Open the app and click **Connect Spotify**.
+7. Paste a public Spotify playlist URL in **Add Playlist**.
 
-## Deploy to Vercel
+## Architecture
 
-Push the project to GitHub and import the repository into Vercel. No environment variables are required.
+The browser authenticates with Spotify using PKCE, fetches playlist metadata/tracks through the Web API, creates a local Spotify Connect device with the Web Playback SDK, and uses the custom RaagBox controls for play/pause/next/previous/seek/volume.
 
-## Important Spotify note
-
-This project uses Spotify's official Embed player rather than downloading or hosting Spotify audio. Playback, account requirements, and available features are controlled by Spotify. Public playlists work best.
-
-Spotify documents official playlist embeds here:
-https://developer.spotify.com/documentation/embeds
-
-The site does not copy or host copyrighted lyrics. The lyrics section is a visual placeholder and points users to Spotify's own available lyrics/features.
-
-## Data
-
-User-added playlist cards are stored in localStorage, so they are only visible in the browser where they were added. If you want all users to see the same playlists, connect the form to Supabase (or another database) in a future version.
+The UI is independent of Spotify's iframe embed, so there is no visible official Spotify embed player to style or hide.

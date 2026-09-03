@@ -1,0 +1,12 @@
+RAAGBOX CUSTOM PLAYER
+=====================
+
+This build replaces the visible Spotify iframe embed with a custom RaagBox player UI.
+
+Read README.md for setup.
+
+IMPORTANT:
+- Requires a Spotify Developer App / Client ID.
+- Requires Spotify Premium for Web Playback SDK playback.
+- Uses PKCE (no client secret in the browser).
+- Review Spotify developer/commercial terms before public/commercial launch.
