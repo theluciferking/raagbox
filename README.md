@@ -32,3 +32,19 @@ npm run dev
 The browser authenticates with Spotify using PKCE, fetches playlist metadata/tracks through the Web API, creates a local Spotify Connect device with the Web Playback SDK, and uses the custom RaagBox controls for play/pause/next/previous/seek/volume.
 
 The UI is independent of Spotify's iframe embed, so there is no visible official Spotify embed player to style or hide.
+
+## 404 playlist fix (Spotify API changes)
+
+This build fixes the common `Spotify playlist request failed (404)` problem in the earlier build.
+
+The old build automatically requested a hard-coded demo playlist after login. That demo playlist is no longer a reliable/current playlist, so the request could return 404.
+
+The fixed build:
+- never auto-loads a hard-coded demo playlist;
+- remembers the playlist URL you entered before Spotify login and loads that URL after login;
+- requests playlist metadata with `market=IN`;
+- does not request the old `tracks` field;
+- starts public playlist playback using the playlist context URI through Spotify Web Playback;
+- handles Spotify's February 2026 playlist API changes, where playlist contents are exposed as `items` and are only available for playlists owned by or collaborated on by the current user.
+
+For a public playlist owned by someone else, RaagBox can use the playlist context for playback, but Spotify may not expose the complete playlist track list to the app. The Web Playback SDK provides current/upcoming playback metadata after playback starts.

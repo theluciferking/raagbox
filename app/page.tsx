@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import SpotifyWebPlayer from "../components/SpotifyWebPlayer";
-import { fetchPlaylist, getPlaylistId, type SpotifyPlaylist, type SpotifyTrack } from "../lib/spotify";
+import { fetchPlaylist, getPlaylistId, type SpotifyPlaylist } from "../lib/spotify";
 
-const DEFAULT_URL = "https://open.spotify.com/playlist/37i9dQZF1DX0XUfTFmNBRM";
+const DEFAULT_URL = "";
 const CLIENT_ID = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID ?? "";
 const SCOPES = "streaming user-read-email user-read-private user-read-playback-state user-modify-playback-state playlist-read-private playlist-read-collaborative";
 
@@ -71,22 +71,25 @@ export default function Home() {
         if (!response.ok) throw new Error(data.error_description ?? "Spotify authorization failed");
         localStorage.setItem("raagbox_access_token", data.access_token);
         if (data.refresh_token) localStorage.setItem("raagbox_refresh_token", data.refresh_token);
-        setToken(data.access_token); localStorage.removeItem("raagbox_code_verifier");
+        const pendingUrl = localStorage.getItem("raagbox_pending_playlist_url");
+        localStorage.removeItem("raagbox_pending_playlist_url");
+        setToken(data.access_token);
+        localStorage.removeItem("raagbox_code_verifier");
         window.history.replaceState({}, "", window.location.pathname);
-        setMessage("Spotify connected.");
+        if (pendingUrl) {
+          setMessage("Spotify connected. Loading your playlist…");
+          setTimeout(() => loadPlaylist(pendingUrl, data.access_token), 0);
+        } else {
+          setMessage("Spotify connected. Paste a playlist URL to load it.");
+        }
       } catch (e) { setMessage(e instanceof Error ? e.message : "Spotify authorization failed."); }
       finally { setBusy(false); }
     })();
   }, []);
 
-  useEffect(() => {
-    if (!token) return;
-    loadPlaylist(DEFAULT_URL, token, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
-
   async function login() {
     if (!CLIENT_ID) { setMessage("Add NEXT_PUBLIC_SPOTIFY_CLIENT_ID to .env.local first."); return; }
+    if (getPlaylistId(playlistUrl)) localStorage.setItem("raagbox_pending_playlist_url", playlistUrl.trim());
     const verifier = randomString();
     const codeChallenge = await challenge(verifier);
     localStorage.setItem("raagbox_code_verifier", verifier);
@@ -95,14 +98,19 @@ export default function Home() {
     window.location.href = auth.toString();
   }
 
-  async function loadPlaylist(url = playlistUrl, accessToken = token, silent = false) {
+  async function loadPlaylist(url = playlistUrl, accessToken = token) {
     const id = getPlaylistId(url);
     if (!id) { setMessage("Paste a valid Spotify playlist URL."); return; }
-    if (!accessToken) { setMessage("Connect Spotify first to load playlist metadata and use the custom player."); return; }
-    setBusy(true); if (!silent) setMessage("Loading playlist…");
-    try { const data = await fetchPlaylist(accessToken, id); setPlaylist(data); setPlaylistUrl(url); setMessage(""); }
-    catch (e) { setMessage(e instanceof Error ? e.message : "Could not load playlist."); }
-    finally { setBusy(false); }
+    if (!accessToken) { setMessage("Connect Spotify first to load the playlist."); return; }
+    setBusy(true); setMessage("Loading playlist…");
+    try {
+      const data = await fetchPlaylist(accessToken, id);
+      setPlaylist(data);
+      setPlaylistUrl(url);
+      setMessage("");
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Could not load playlist.");
+    } finally { setBusy(false); }
   }
 
   function addSaved() {
@@ -111,9 +119,7 @@ export default function Home() {
     setSaved(prev => [item, ...prev.filter(x => x.id !== item.id)]); setShowAdd(false);
   }
 
-  const tracks = useMemo(() => playlist?.tracks.items.map(x => x.track).filter((x): x is SpotifyTrack => Boolean(x?.id && x.uri)) ?? [], [playlist]);
   const search = query.toLowerCase();
-  const shownTracks = tracks.filter(t => `${t.name} ${t.artists.map(a => a.name).join(" ")}`.toLowerCase().includes(search));
 
   return (
     <main className={`app ${dark ? "dark" : "light"}`}>
@@ -146,27 +152,31 @@ export default function Home() {
                 <div className="eyebrow">{playlist ? "SPOTIFY PLAYLIST" : "YOUR INDIAN MUSIC LOUNGE"}</div>
                 <h1>{playlist?.name ?? "Your next mehfil"}</h1>
                 <p className="artist-line">{playlist?.description ? playlist.description.replace(/<[^>]+>/g, "") : "Connect Spotify and paste a playlist URL to bring your music into this custom player."}</p>
-                <div className="actions"><button className="liked">♡ Like</button><button onClick={() => document.getElementById("queue")?.scrollIntoView({behavior:"smooth"})}>☷ Queue</button><a href={playlist?.external_urls.spotify ?? DEFAULT_URL} target="_blank" rel="noreferrer">↗ Spotify</a></div>
+                <div className="actions"><button className="liked">♡ Like</button><button onClick={() => document.getElementById("queue")?.scrollIntoView({behavior:"smooth"})}>☷ Queue</button><a href={playlist?.external_urls.spotify ?? "https://open.spotify.com"} target="_blank" rel="noreferrer">↗ Spotify</a></div>
                 <div className="wave-large">{Array.from({length: 52}).map((_,i)=><i key={i} style={{height:`${10+((i*23)%44)}px`}}/>)}</div>
               </div>
-              <div className="progress-label"><span>0:00</span><span>Spotify Web Playback</span><span>{tracks.length ? `${tracks.length} tracks` : "—"}</span></div>
+              <div className="progress-label"><span>0:00</span><span>Spotify Web Playback</span><span>{playlist?.items?.total ? `${playlist.items.total} tracks` : "Spotify playlist"}</span></div>
             </section>
 
-            {token && playlist ? <SpotifyWebPlayer token={token} tracks={shownTracks} playlistName={playlist.name}/> : <section className="connect-card"><div className="connect-icon">♫</div><div><span className="eyebrow">CUSTOM PLAYER</span><h2>Connect Spotify to start listening</h2><p>The Spotify iframe is not used here. RaagBox uses Spotify's Web Playback SDK to provide this custom UI.</p></div><button className="connect" onClick={login} disabled={busy}>{busy ? "Connecting…" : "Connect Spotify"}</button></section>}
+            {token && playlist ? <div id="player"><SpotifyWebPlayer token={token} playlistId={playlist.id} playlistName={playlist.name}/></div> : <section className="connect-card"><div className="connect-icon">♫</div><div><span className="eyebrow">CUSTOM PLAYER</span><h2>Connect Spotify to start listening</h2><p>The Spotify iframe is not used here. RaagBox uses Spotify's Web Playback SDK to provide this custom UI.</p></div><button className="connect" onClick={login} disabled={busy}>{busy ? "Connecting…" : "Connect Spotify"}</button></section>}
 
-            <section className="featured"><div className="section-title"><div><span>FEATURED PLAYLISTS</span><h2>Made for your mood</h2></div><button>View All ›</button></div><div className="cards">{fallbackCards.map(([a,b,c,e],i)=><button className="playlist-card" key={a} onClick={() => { setPlaylistUrl(saved[i]?.url ?? DEFAULT_URL); if (token) loadPlaylist(saved[i]?.url ?? DEFAULT_URL); }}><div className={`card-art art-${i}`}>{e}<small>✦</small></div><strong>{a}</strong><span>{b}</span><em>{c}</em></button>)}</div></section>
+            <section className="featured"><div className="section-title"><div><span>FEATURED PLAYLISTS</span><h2>Made for your mood</h2></div><button>View All ›</button></div><div className="cards">{fallbackCards.map(([a,b,c,e],i)=><button className="playlist-card" key={a} onClick={() => {
+              const url = saved[i]?.url;
+              if (url) { setPlaylistUrl(url); if (token) loadPlaylist(url, token); else { setShowAdd(true); } }
+              else { setShowAdd(true); setMessage("Add your Spotify playlist URL to this card from the Add Playlist panel."); }
+            }}><div className={`card-art art-${i}`}>{e}<small>✦</small></div><strong>{a}</strong><span>{b}</span><em>{c}</em></button>)}</div></section>
           </div>
 
           <aside className="right-column">
-            <section className="lyrics-panel"><div className="panel-head"><strong>LYRICS</strong><span>हिंदी⌄</span></div><div className="lyrics-placeholder"><p>Lyrics remain inside Spotify's supported experience.</p><p>RaagBox does not copy or host copyrighted lyrics.</p><button onClick={() => window.open(playlist?.external_urls.spotify ?? DEFAULT_URL, "_blank")}>Open Spotify ↗</button></div></section>
-            <section className="queue-panel" id="queue"><div className="panel-head"><strong>QUEUE</strong><button>Clear</button></div><div className="queue-list">{(shownTracks.length ? shownTracks.slice(0,7) : []).map((t,i)=><button key={t.id+i} className={i===0 ? "queue-item selected" : "queue-item"}><span>⠿</span><img src={t.album.images?.[2]?.url ?? t.album.images?.[0]?.url ?? ""} alt=""/><div><strong>{t.name}</strong><small>{t.artists.map(a=>a.name).join(", ")}</small></div><em>{Math.floor(t.duration_ms/60000)}:{String(Math.floor(t.duration_ms/1000)%60).padStart(2,"0")}</em></button>)}{!shownTracks.length && <div className="empty-queue">Connect Spotify and load a playlist to see its queue.</div>}</div></section>
+            <section className="lyrics-panel"><div className="panel-head"><strong>LYRICS</strong><span>हिंदी⌄</span></div><div className="lyrics-placeholder"><p>Lyrics remain inside Spotify's supported experience.</p><p>RaagBox does not copy or host copyrighted lyrics.</p><button onClick={() => window.open(playlist?.external_urls.spotify ?? "https://open.spotify.com", "_blank")}>Open Spotify ↗</button></div></section>
+            <section className="queue-panel" id="queue"><div className="panel-head"><strong>QUEUE</strong><button onClick={() => document.getElementById("player")?.scrollIntoView({behavior:"smooth"})}>Open Player</button></div><div className="queue-list"><div className="empty-queue">The queue is supplied by Spotify after playback starts. Use the custom player to play, pause, skip and see upcoming tracks.</div></div></section>
           </aside>
         </div>
 
         <footer><span>✿ Indian Aesthetic</span><i>•</i><span>♫ Custom Player</span><i>•</i><span>● Spotify Powered</span><i>•</i><span>▣ Mobile Responsive</span><i>•</i><span>♡ Easy to Use</span><i>•</i><span>♥ Made with love in India</span></footer>
       </section>
 
-      {showAdd && <div className="modal-backdrop" onMouseDown={e => e.target===e.currentTarget && setShowAdd(false)}><div className="modal"><button className="close" onClick={() => setShowAdd(false)}>×</button><span className="eyebrow">ADD A MEHFIL</span><h2>Bring your playlist</h2><p>Paste a public Spotify playlist URL. RaagBox will fetch its metadata and tracks after Spotify authorization.</p><label>Spotify playlist URL<input value={playlistUrl} onChange={e => setPlaylistUrl(e.target.value)} placeholder="https://open.spotify.com/playlist/..."/></label><div className="modal-actions"><button onClick={() => {setShowAdd(false); if(!token) login(); else loadPlaylist(playlistUrl);}} className="connect">{token ? "Load Playlist" : "Connect Spotify"}</button><button onClick={() => {setShowAdd(false); addSaved();}} className="ghost">Save current</button></div></div></div>}
+      {showAdd && <div className="modal-backdrop" onMouseDown={e => e.target===e.currentTarget && setShowAdd(false)}><div className="modal"><button className="close" onClick={() => setShowAdd(false)}>×</button><span className="eyebrow">ADD A MEHFIL</span><h2>Bring your playlist</h2><p>Paste a Spotify playlist URL. RaagBox fetches playlist metadata and starts the playlist context through Spotify Web Playback. Spotify controls which track metadata is available to the app.</p><label>Spotify playlist URL<input value={playlistUrl} onChange={e => setPlaylistUrl(e.target.value)} placeholder="https://open.spotify.com/playlist/..."/></label><div className="modal-actions"><button onClick={() => {setShowAdd(false); if(!token) login(); else loadPlaylist(playlistUrl);}} className="connect">{token ? "Load Playlist" : "Connect Spotify"}</button><button onClick={() => {setShowAdd(false); addSaved();}} className="ghost">Save current</button></div></div></div>}
       {message && <div className="toast">{message}<button onClick={() => setMessage("")}>×</button></div>}
     </main>
   );
