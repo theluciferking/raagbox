@@ -120,24 +120,22 @@ export default function Home() {
     <main className="app">
       <section className="workspace">
         <header className="topbar">
-<button className="add-playlist" onClick={() => setShowAdd(true)}>＋ Add Playlist</button>
+          <button className="add-playlist" onClick={() => setShowAdd(true)}>＋ Add Playlist</button>
         </header>
 
         <div className="content-grid">
           <div className="main-column">
             <section className="hero-player">
               <div className="ornament">✦</div>
-              <div className="hero-artwork">{playlist?.images?.[0]?.url ? <img src={playlist.images[0].url} alt="Playlist artwork"/> : <div className="placeholder-art">राग<br/><small>RaagBox</small></div>}</div>
+              <div className="hero-artwork"><div className="placeholder-art">राग<br/><small>RaagBox</small></div></div>
               <div className="hero-info">
                 <span className="now-pill">NOW PLAYING</span>
                 <div className="eyebrow">{playlist ? "SPOTIFY PLAYLIST" : "YOUR INDIAN MUSIC LOUNGE"}</div>
                 <h1>{playlist?.name ?? "Your next mehfil"}</h1>
                 <p className="artist-line">{playlist?.description ? playlist.description.replace(/<[^>]+>/g, "") : "Connect Spotify and paste a playlist URL to bring your music into this custom player."}</p>
-                <div className="actions"><button className="liked">♡ Like</button><a href={playlist?.external_urls.spotify ?? "https://open.spotify.com"} target="_blank" rel="noreferrer">↗ Spotify</a></div>
-                <div className="wave-large">{Array.from({length: 52}).map((_,i)=><i key={i} style={{height:`${10+((i*23)%44)}px`}}/>)}</div>
+                <div className="actions"><a href={playlist?.external_urls.spotify ?? "https://open.spotify.com"} target="_blank" rel="noreferrer">↗ Spotify</a></div>
               </div>
-              <div className="progress-label"><span>0:00</span><span>Spotify Web Playback</span><span>{playlist?.items?.total ? `${playlist.items.total} tracks` : "Spotify playlist"}</span></div>
-            </section>
+                          </section>
 
             {token && playlist ? <div id="player"><SpotifyWebPlayer token={token} playlistId={playlist.id} playlistName={playlist.name}/></div> : <section className="connect-card"><div className="connect-icon">♫</div><div><span className="eyebrow">CUSTOM PLAYER</span><h2>Connect Spotify to start listening</h2><p>The Spotify iframe is not used here. RaagBox uses Spotify's Web Playback SDK to provide this custom UI.</p></div><button className="connect" onClick={login} disabled={busy}>{busy ? "Connecting…" : "Connect Spotify"}</button></section>}
 
